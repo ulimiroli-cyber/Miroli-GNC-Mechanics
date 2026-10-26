@@ -333,7 +333,7 @@ section{padding:64px 0}
     if(/MONTO_BAJO/.test(m))return"El trabajo debe superar $80.000 ARS para sumar un sello.";
     if(/TARJETA_COMPLETA/.test(m))return"La tarjeta está completa. Canjeá el premio y reiniciala.";
     if(/NO_LOGIN|JWT|not authenticated/i.test(m))return"Iniciá sesión para usar tu tarjeta.";
-    return"No se pudo conectar. Probá de nuevo.";
+    console.error(e);return"Error: "+m;
   }
   function render(){
     for(var i=0;i<MAX;i++)slots.children[i].classList.toggle("on",i<st.stamps);
