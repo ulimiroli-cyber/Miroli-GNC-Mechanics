@@ -287,7 +287,7 @@ section{padding:64px 0}
         <li>Cada trabajo de más de $80.000 ARS suma un sello.</li>
         <li>Al juntar los 5, mostrá la tarjeta y canjeá tu premio.</li>
       </ol>
-      <p class="note">Tu tarjeta queda guardada en este dispositivo. Entrá siempre desde el mismo teléfono para no perder tus sellos.</p>
+      <p class="note">Tu tarjeta queda guardada en tu cuenta. Iniciá sesión desde cualquier dispositivo para ver tus sellos.</p>
     </div>
     <div class="rv">
       <div class="card" aria-live="polite">
@@ -322,30 +322,45 @@ section{padding:64px 0}
 
 <script>
 (function(){
-  var PIN="2008", MAX=5, MIN=80000, KEY="miroli_card_v3";
-  var st={name:"",stamps:0};
-  try{var s=localStorage.getItem(KEY);if(s)st=JSON.parse(s)}catch(e){}
+  var MAX=5, MIN=80000;
+  var st={name:"",stamps:0}, sb=null, logged=false;
   var $=function(i){return document.getElementById(i)};
   var slots=$("slots"),nm=$("nm"),msg=$("msg");
   for(var i=0;i<MAX;i++){var d=document.createElement("div");d.className="slot"+(i===MAX-1?" last":"");slots.appendChild(d)}
-  function save(){try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}}
+  function errTxt(e){
+    var m=(e&&e.message)||"";
+    if(/PIN_INCORRECTO/.test(m))return"PIN incorrecto. Pedile al personal del taller.";
+    if(/MONTO_BAJO/.test(m))return"El trabajo debe superar $80.000 ARS para sumar un sello.";
+    if(/TARJETA_COMPLETA/.test(m))return"La tarjeta está completa. Canjeá el premio y reiniciala.";
+    if(/NO_LOGIN|JWT|not authenticated/i.test(m))return"Iniciá sesión para usar tu tarjeta.";
+    return"No se pudo conectar. Probá de nuevo.";
+  }
   function render(){
     for(var i=0;i<MAX;i++)slots.children[i].classList.toggle("on",i<st.stamps);
     $("cnt").textContent=st.stamps+"/"+MAX; nm.value=st.name||"";
     $("prize").classList.toggle("show",st.stamps>=MAX);
     var f=MAX-st.stamps;
+    if(!logged){msg.textContent="Iniciá sesión para ver y guardar tus sellos.";return}
     msg.textContent=st.stamps>=MAX?"¡Completaste los 5 sellos!":st.stamps===0?"Todavía no tenés sellos. Tu próximo trabajo grande suma.":"Te faltan "+f+" sello"+(f>1?"s":"")+" para tu premio.";
   }
-  nm.addEventListener("input",function(){st.name=nm.value;save()});
-  function pinOk(){if($("pin").value!==PIN){msg.textContent="PIN incorrecto. Pedile al personal del taller.";return false}return true}
+  function apply(r){if(r.error){msg.textContent=errTxt(r.error);return false}st={name:r.data.name||"",stamps:r.data.stamps};render();return true}
+  function load(){
+    if(!sb||!logged){st={name:"",stamps:0};render();return}
+    sb.rpc("get_card").then(apply);
+  }
+  // la tarjeta se carga cuando el script de sesión avisa quién está logueado
+  window.addEventListener("miroli-session",function(e){sb=window.miroliSb;logged=!!(e.detail&&e.detail.user);load()});
+  nm.addEventListener("change",function(){if(!logged)return;sb.rpc("set_card_name",{p_name:nm.value}).then(apply)});
   $("add").addEventListener("click",function(){
-    if(!pinOk())return;
+    if(!logged){msg.textContent="Iniciá sesión para sumar sellos.";return}
     var a=parseFloat($("amt").value);
     if(!(a>MIN)){msg.textContent="El trabajo debe superar $80.000 ARS para sumar un sello.";return}
-    if(st.stamps>=MAX){msg.textContent="La tarjeta está completa. Canjeá el premio y reiniciala.";return}
-    st.stamps++;save();render();$("pin").value="";$("amt").value="";
+    sb.rpc("add_stamp",{p_pin:$("pin").value,p_amount:a}).then(function(r){if(apply(r)){$("pin").value="";$("amt").value=""}});
   });
-  $("reset").addEventListener("click",function(){if(!pinOk())return;st.stamps=0;save();render();$("pin").value=""});
+  $("reset").addEventListener("click",function(){
+    if(!logged){msg.textContent="Iniciá sesión para usar tu tarjeta.";return}
+    sb.rpc("reset_card",{p_pin:$("pin").value}).then(function(r){if(apply(r))$("pin").value=""});
+  });
   render();
 
   // luz que sigue al cursor
@@ -369,7 +384,7 @@ section{padding:64px 0}
   var SUPABASE_KEY="sb_publishable_HDkogAkvhp2YHHRWak6REw_VWbUo_95";
   // ==============================================================================
   var $=function(i){return document.getElementById(i)};
-  var ok=/^https:\/\/.+\.supabase\.co/.test(SUPABASE_URL)&&SUPABASE_KEY.length>40&&window.supabase;
+  var ok=/^https:\/\/.+\.supabase\.co/.test(SUPABASE_URL)&&SUPABASE_KEY.length>20&&window.supabase;
   var sb=ok?window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
   var ov=$("authOv"),msg=$("aMsg"),mode="login";
   function say(t,c){msg.textContent=t||"";msg.className="aMsg "+(c||"")}
@@ -432,8 +447,8 @@ section{padding:64px 0}
   });
   $("aExit").addEventListener("click",function(){if(sb)sb.auth.signOut()});
   if(sb){
-    sb.auth.onAuthStateChange(function(ev,s){if(ev==="PASSWORD_RECOVERY")open("newpass");showUser(s)});
-    sb.auth.getSession().then(function(r){showUser(r.data.session);if(!r.data.session)auto()});
+    sb.auth.onAuthStateChange(function(ev,s){if(ev==="PASSWORD_RECOVERY")open("newpass");showUser(s);window.miroliSb=sb;window.dispatchEvent(new CustomEvent("miroli-session",{detail:s}))});
+    sb.auth.getSession().then(function(r){showUser(r.data.session);window.miroliSb=sb;window.dispatchEvent(new CustomEvent("miroli-session",{detail:r.data.session}));if(!r.data.session)auto()});
   }else auto();
   function auto(){var seen=0;try{seen=sessionStorage.getItem("miroli_auth_seen")}catch(e){}if(!seen)setTimeout(function(){if(ov.hidden)open("register")},700)}
 })();
