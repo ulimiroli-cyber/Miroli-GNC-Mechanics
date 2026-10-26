@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MIROLI GNC Mechanics</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light;--red:#D7191F;--red2:#9E0D12;--yel:#FFC400;--yel2:#FFE27A;--blk:#0A0A0A;--wht:#FFFFFF;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:80px}
+body{margin:0;background:var(--yel);color:var(--blk);font:400 17px/1.55 Barlow,system-ui,sans-serif;overflow-x:hidden}
+h1,h2,h3{font-family:"Barlow Condensed","Arial Narrow",Impact,sans-serif;margin:0;line-height:.95}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--wht);outline-offset:3px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 22px;position:relative}
+.btn{display:inline-block;font:800 19px "Barlow Condensed",sans-serif;letter-spacing:.05em;text-transform:uppercase;padding:15px 30px;border:0;border-radius:50px;text-decoration:none;cursor:pointer;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s}
+.btn::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.55) 50%,transparent 65%);transform:translateX(-120%);transition:transform .6s}
+.btn:hover::after{transform:translateX(120%)}
+.btn:hover{transform:translateY(-2px)}
+.b1{background:var(--wht);color:var(--red);box-shadow:0 0 0 0 rgba(255,255,255,.7);animation:ring 2.4s infinite}
+.b2{background:transparent;color:var(--yel);border:2px solid var(--yel)}
+.b3{background:var(--blk);color:var(--yel)}
+@keyframes ring{70%{box-shadow:0 0 0 16px rgba(255,255,255,0)}100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}}
+
+/* nav */
+.nav{position:fixed;top:0;left:0;right:0;z-index:50;padding-top:env(safe-area-inset-top,0px);background:rgba(10,10,10,.75);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,196,0,.3);box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.navIn{display:flex;justify-content:space-between;align-items:center;height:96px}
+.logo{display:flex;align-items:center;text-decoration:none}
+.logo img{height:80px;width:auto;object-fit:contain;filter:drop-shadow(0 2px 8px rgba(0,0,0,.4));transition:transform .3s}
+.logo img:hover{transform:scale(1.05)}
+.nav nav a{color:var(--yel);text-decoration:none;font-weight:600;margin-left:28px;font-size:16px;transition:color .2s}
+.nav nav a:hover{color:var(--wht);text-shadow:0 0 10px rgba(255,255,255,.5)}
+
+/* hero */
+.hero{--mx:70%;--my:40%;min-height:100vh;background:radial-gradient(520px circle at var(--mx) var(--my),rgba(255,226,122,.35),transparent 60%),radial-gradient(900px 600px at 15% 10%,#F0383D,transparent 60%),linear-gradient(160deg,var(--red),var(--red2));color:var(--yel);position:relative;overflow:hidden;display:flex;align-items:center;padding:120px 0 80px}
+.orb{position:absolute;border-radius:50%;filter:blur(50px);opacity:.5;animation:drift 9s ease-in-out infinite}
+.o1{width:300px;height:300px;background:var(--yel);left:-60px;top:20%}
+.o2{width:240px;height:240px;background:var(--wht);right:8%;top:12%;animation-delay:-4s;opacity:.25}
+@keyframes drift{50%{transform:translate(30px,-40px) scale(1.15)}}
+.heroGrid{display:grid;grid-template-columns:1fr;gap:24px;text-align:center}
+.hero h1{font-size:clamp(58px,11vw,150px);font-weight:800;text-transform:uppercase;text-shadow:0 8px 40px rgba(0,0,0,.35)}
+.hero h1 b{color:var(--wht);text-shadow:0 0 30px rgba(255,255,255,.8),0 0 80px rgba(255,226,122,.6);animation:glow 3s ease-in-out infinite}
+@keyframes glow{50%{text-shadow:0 0 14px rgba(255,255,255,.5),0 0 40px rgba(255,226,122,.3)}}
+.hero p.sub{font-size:20px;max-width:52ch;margin:14px auto 26px;color:var(--yel2)}
+.cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.stage{position:relative;max-width:420px;margin:30px auto 0;width:100%}
+.mascot-img{width:100%;height:auto;display:block;animation:float 5s ease-in-out infinite;filter:drop-shadow(0 20px 25px rgba(0,0,0,.45))}
+@keyframes float{50%{transform:translateY(-14px)}}
+.floor{position:absolute;left:10%;right:10%;bottom:-12px;height:26px;background:radial-gradient(ellipse,rgba(10,10,10,.55),transparent 70%);animation:sh 5s ease-in-out infinite}
+@keyframes sh{50%{transform:scaleX(.85);opacity:.6}}
+
+/* Animación mejorada para las burbujas / chips alrededor del personaje */
+.chip{position:absolute;background:rgba(10,10,10,.88);backdrop-filter:blur(12px);color:var(--yel);border:2px solid rgba(255,196,0,.7);border-radius:18px;padding:14px 20px;font:800 20px/1 "Barlow Condensed",sans-serif;text-transform:uppercase;box-shadow:0 15px 40px rgba(0,0,0,.5),0 0 30px rgba(255,196,0,.35);z-index:2;animation:chipDynamic 6s ease-in-out infinite;transform-origin:center}
+.chip small{display:block;font:500 13px Barlow,sans-serif;text-transform:none;color:var(--wht);margin-top:4px}
+.c1{left:-22%;top:12%;animation-name:chipFloat1}
+.c2{right:-22%;top:35%;animation-name:chipFloat2;animation-delay:-2s}
+.c3{left:-16%;bottom:8%;animation-name:chipFloat3;animation-delay:-4s}
+
+@keyframes chipFloat1{
+  0%, 100%{transform:translateY(0) rotate(0deg) scale(1);}
+  50%{transform:translateY(-12px) rotate(-3deg) scale(1.06);box-shadow:0 20px 50px rgba(0,0,0,.6),0 0 40px rgba(255,196,0,.6);}
+}
+@keyframes chipFloat2{
+  0%, 100%{transform:translateY(0) rotate(0deg) scale(1);}
+  50%{transform:translateY(14px) rotate(3deg) scale(1.06);box-shadow:0 20px 50px rgba(0,0,0,.6),0 0 40px rgba(255,226,122,.6);}
+}
+@keyframes chipFloat3{
+  0%, 100%{transform:translateY(0) rotate(0deg) scale(1);}
+  50%{transform:translateY(-10px) rotate(-2deg) scale(1.06);box-shadow:0 20px 50px rgba(0,0,0,.6),0 0 40px rgba(215,25,31,.6);}
+}
+
+/* ticker */
+.tick{background:var(--blk);color:var(--yel);overflow:hidden;white-space:nowrap;padding:18px 0;border-block:2px solid var(--yel);box-shadow:0 0 20px rgba(0,0,0,.5)}
+.tick div{display:inline-block;animation:run 28s linear infinite;font:800 26px "Barlow Condensed",sans-serif;text-transform:uppercase}
+.tick span{margin:0 28px}.tick span::after{content:"✦";margin-left:56px;color:var(--wht)}
+@keyframes run{to{transform:translateX(-50%)}}
+
+/* sections */
+section{padding:90px 0}
+h2{font-size:clamp(42px,6.5vw,82px);font-weight:800;text-transform:uppercase;letter-spacing:-0.01em}
+.lead{max-width:56ch;margin:12px 0 44px;font-size:19px}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:24px}
+.sv{grid-column:span 4;background:linear-gradient(155deg,#1c1c1c,var(--blk));color:var(--yel);border-radius:22px;padding:32px 28px;position:relative;overflow:hidden;min-height:220px;transition:transform .35s,box-shadow .35s;border:1px solid rgba(255,196,0,.15);box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.sv::before{content:"";position:absolute;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(255,196,0,.35),transparent 65%);left:var(--x,80%);top:var(--y,0%);transform:translate(-50%,-50%);transition:opacity .3s;opacity:.55}
+.sv:hover{transform:translateY(-8px);box-shadow:0 24px 50px rgba(0,0,0,.4),0 0 0 2px var(--red)}
+.sv h3{font-size:36px;font-weight:800;text-transform:uppercase;position:relative}
+.sv p{margin:12px 0 0;color:var(--wht);opacity:.9;position:relative}
+.sv.big{grid-column:span 8;background:linear-gradient(155deg,var(--red),var(--red2));color:var(--yel);border:1px solid rgba(255,255,255,.2)}
+.sv.big h3{font-size:54px}
+.tag{display:inline-block;background:var(--yel);color:var(--blk);font:600 14px Barlow,sans-serif;padding:5px 14px;border-radius:30px;margin-bottom:14px;position:relative;animation:blink 2.2s infinite;box-shadow:0 0 10px rgba(255,196,0,.4)}
+@keyframes blink{50%{box-shadow:0 0 20px var(--wht)}}
+.sv.w2{grid-column:span 6}
+
+/* fidelidad */
+.fid{background:linear-gradient(165deg,var(--red),var(--red2));color:var(--yel);position:relative;overflow:hidden}
+.fidGrid{display:grid;grid-template-columns:1fr 1.2fr;gap:50px;align-items:center}
+.fid .lead{color:var(--yel2);margin-bottom:22px}
+.how{margin:0;padding-left:20px;color:var(--yel2)}.how li{margin-bottom:10px}
+.note{font-size:14px;color:var(--yel2);opacity:.85;margin-top:18px}
+.card{background:linear-gradient(150deg,#1d1d1d,var(--blk));color:var(--yel);border-radius:26px;padding:32px;box-shadow:0 30px 70px rgba(0,0,0,.6),0 0 60px rgba(255,196,0,.2);position:relative;overflow:hidden;animation:float 7s ease-in-out infinite;border:1px solid rgba(255,196,0,.3)}
+.card::after{content:"";position:absolute;top:-50%;left:-60%;width:40%;height:200%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent);transform:rotate(20deg);animation:shine 5s infinite}
+@keyframes shine{0%{left:-60%}55%,100%{left:140%}}
+.cTop{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:18px;position:relative}
+.cTop b{font:800 28px/1 "Barlow Condensed",sans-serif;text-transform:uppercase}
+.cTop small{display:block;color:var(--wht);opacity:.75}
+.cnt{font:800 46px/1 "Barlow Condensed",sans-serif;background:var(--yel);color:var(--blk);padding:6px 14px;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,.3)}
+.name{width:100%;font:600 17px Barlow,sans-serif;padding:12px 14px;border:2px solid rgba(255,196,0,.5);border-radius:12px;background:rgba(255,255,255,.07);color:var(--yel);margin:6px 0 18px;position:relative;transition:border-color .2s}
+.name:focus{border-color:var(--wht);outline:none}
+.name::placeholder{color:rgba(255,226,122,.55)}
+.slots{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;position:relative}
+.slot{aspect-ratio:1;border-radius:50%;border:2px dashed rgba(255,196,0,.6);display:grid;place-items:center;font:800 28px "Barlow Condensed",sans-serif;position:relative;background:rgba(255,255,255,.02);background-size:cover;background-position:center}
+.slot.last:not(.on){border-style:solid;color:var(--yel);font-size:13px;letter-spacing:.03em}
+.slot.last:not(.on)::after{content:"PREMIO"}
+.slot.on{background-image:url('input_file_0.png');border:none;box-shadow:0 0 20px rgba(215,25,31,.8);animation:pop .5s ease-out}
+@keyframes pop{0%{transform:scale(.3) rotate(-30deg)}65%{transform:scale(1.2)}100%{transform:scale(1ova)}}
+.msg{margin:18px 0 0;font-weight:600;position:relative}
+.prize{display:none;margin-top:14px;background:var(--yel);color:var(--blk);border-radius:14px;padding:14px 16px;font:800 24px/1.1 "Barlow Condensed",sans-serif;text-transform:uppercase;position:relative;animation:blink 1.6s infinite;box-shadow:0 0 25px rgba(255,196,0,.6)}
+.prize.show{display:block}
+.rule{font-size:14px;color:var(--wht);opacity:.8;margin-top:8px;position:relative}
+.staff{margin-top:20px;border-top:1px solid rgba(255,196,0,.3);padding-top:14px;position:relative}
+.staff summary{cursor:pointer;font-weight:600;color:var(--yel2)}
+.sr{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.sr input{flex:1 1 120px;min-width:0;font:600 16px Barlow,sans-serif;padding:11px;border:2px solid rgba(255,196,0,.5);border-radius:10px;background:rgba(255,255,255,.07);color:var(--yel)}
+.sr input:focus{border-color:var(--wht);outline:none}
+.sr .btn{font-size:17px;padding:11px 20px}
+
+/* Botones flotantes (WhatsApp y Ubicación) */
+.floating-buttons{position:fixed;bottom:28px;right:28px;display:flex;flex-direction:column;gap:12px;z-index:99}
+.float-btn{width:64px;height:64px;border-radius:50%;display:flex;justify-content:center;align-items:center;box-shadow:0 6px 25px rgba(0,0,0,.35);transition:transform .3s,box-shadow .3s;text-decoration:none}
+.float-btn svg{width:34px;height:34px;fill:#FFF}
+.whatsapp-float{background:#25D366;box-shadow:0 6px 25px rgba(37,211,102,.5);animation:pulse-wa 2s infinite}
+.whatsapp-float:hover{transform:scale(1.1);box-shadow:0 10px 35px rgba(37,211,102,.8)}
+.location-float{background:var(--red);box-shadow:0 6px 25px rgba(215,25,31,.5);animation:pulse-loc 2s infinite}
+.location-float:hover{transform:scale(1.1);box-shadow:0 10px 35px rgba(215,25,31,.8)}
+
+@keyframes pulse-wa{0%{box-shadow:0 0 0 0 rgba(37,211,102,.7)}70%{box-shadow:0 0 0 18px rgba(37,211,102,0)}100%{box-shadow:0 0 0 0 rgba(37,211,102,0)}}
+@keyframes pulse-loc{0%{box-shadow:0 0 0 0 rgba(215,25,31,.7)}70%{box-shadow:0 0 0 18px rgba(215,25,31,0)}100%{box-shadow:0 0 0 0 rgba(215,25,31,0)}}
+
+footer{background:var(--blk);color:var(--yel2);padding:24px 0;font-size:14px;border-top:1px solid rgba(255,196,0,.25)}
+footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+
+.js .rv{opacity:0;transform:translateY(28px);transition:opacity .8s,transform .8s}
+.js .rv.in{opacity:1;transform:none}
+
+@media (max-width:820px){
+.nav nav{display:none}
+.fidGrid{grid-template-columns:1fr;gap:34px}
+.sv,.sv.big,.sv.w2{grid-column:span 12}
+.sv.big h3{font-size:42px}
+.chip{display:none}
+section{padding:64px 0}
+.hero{padding-top:96px}
+.floating-buttons{bottom:20px;right:20px;gap:10px}
+.float-btn{width:56px;height:56px}
+.float-btn svg{width:28px;height:28px}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.js .rv{opacity:1;transform:none}}
+
+/* ---- Cuenta de usuario (agregado) ---- */
+.authBox{display:flex;gap:10px;align-items:center}
+.btn.sm{font-size:16px;padding:9px 18px;white-space:nowrap}
+.uChip{color:var(--yel);font-weight:600;display:flex;gap:10px;align-items:center}
+.uChip span{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.authOv{position:fixed;inset:0;z-index:200;background:rgba(10,10,10,.78);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow:auto}
+.authOv[hidden]{display:none}
+.authM{position:relative;margin:auto;width:100%;max-width:430px;background:linear-gradient(150deg,#1d1d1d,var(--blk));color:var(--yel);border:1px solid rgba(255,196,0,.4);border-radius:26px;padding:30px 26px;box-shadow:0 30px 80px rgba(0,0,0,.7),0 0 60px rgba(215,25,31,.35);animation:authIn .45s ease-out}
+@keyframes authIn{from{opacity:0;transform:translateY(30px) scale(.95)}}
+.authX{position:absolute;top:10px;right:14px;background:none;border:0;color:var(--yel);font-size:32px;cursor:pointer;line-height:1}
+.authM img{display:block;height:96px;width:auto;margin:0 auto 6px;animation:float 5s ease-in-out infinite}
+.authM h2{font-size:42px;text-align:center}
+.authSub{text-align:center;color:var(--yel2);margin:8px 0 18px}
+.gbtn{width:100%;display:flex;gap:12px;align-items:center;justify-content:center;background:#fff;color:#1f1f1f;font:600 16px Barlow,sans-serif;border:0;border-radius:50px;padding:13px;cursor:pointer;transition:transform .2s,box-shadow .2s}
+.gbtn:hover{transform:translateY(-2px);box-shadow:0 0 24px rgba(255,255,255,.5)}
+.gbtn svg{width:22px;height:22px}
+.or{display:flex;align-items:center;gap:12px;color:var(--yel2);font-size:14px;margin:18px 0}
+.or::before,.or::after{content:"";flex:1;height:1px;background:rgba(255,196,0,.3)}
+.tabs{display:flex;background:rgba(255,255,255,.07);border-radius:50px;padding:4px;margin-bottom:14px}
+.tabs button{flex:1;border:0;background:none;color:var(--yel);font:800 17px "Barlow Condensed",sans-serif;text-transform:uppercase;letter-spacing:.04em;padding:10px;border-radius:50px;cursor:pointer}
+.tabs button.on{background:var(--yel);color:var(--blk)}
+.authM form{display:grid;gap:10px}
+.authM input{width:100%;font:600 16px Barlow,sans-serif;padding:12px 14px;border:2px solid rgba(255,196,0,.5);border-radius:12px;background:rgba(255,255,255,.07);color:var(--yel)}
+.authM input:focus{border-color:var(--wht);outline:none}
+.authM input::placeholder{color:rgba(255,226,122,.55)}
+.authM form .btn{width:100%}
+.aMsg{min-height:1.4em;font-weight:600;font-size:15px;text-align:center;margin:10px 0 0}
+.aMsg.err{color:#ff8a8a}.aMsg.ok{color:#9dffb0}
+.aLink{background:none;border:0;color:var(--yel2);text-decoration:underline;cursor:pointer;font:inherit;font-size:14px;padding:0;justify-self:center}
+.hid{display:none!important}
+@media (max-width:820px){.authBox{flex-direction:column;gap:6px}.btn.sm{font-size:14px;padding:7px 14px}.uChip span{display:none}}
+</style>
+</head>
+<body>
+<script>document.documentElement.classList.add("js")</script>
+
+<!-- Botones flotantes (Ubicación y WhatsApp) -->
+<div class="floating-buttons">
+  <a href="https://maps.app.goo.gl/bgizayG4deeshtrY8" class="float-btn location-float" target="_blank" rel="noopener" aria-label="Ver ubicación del taller">
+    <svg viewBox="0 0 24 24"><path d="M12 0C7.802 0 4 3.403 4 7.602 4 11.8 7.602 17.5 12 24c4.398-6.5 8-12.2 8-16.398C20 3.403 16.198 0 12 0zm0 11a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>
+  </a>
+  <a href="https://wa.me/5493814682677" class="float-btn whatsapp-float" target="_blank" rel="noopener" aria-label="Escribir por WhatsApp">
+    <svg viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+  </a>
+</div>
+
+<header class="nav"><div class="wrap navIn">
+  <a class="logo" href="#"><img src="Gemini_Generated_Image_6ry3ba6ry3ba6ry3.png" alt="MIROLI GNC Mechanics"></a>
+  <nav aria-label="Principal"><a href="#servicios">Servicios</a><a href="#tarjeta">Tarjeta de sellos</a><a href="#contacto">Contacto</a></nav>
+  <div class="authBox" id="authBox">
+    <div class="authBox" id="aOut"><button class="btn b2 sm" type="button" data-auth="login">Iniciar sesión</button><button class="btn b1 sm" type="button" data-auth="register">Registrarse</button></div>
+    <div class="uChip hid" id="aIn"><span id="aUser"></span><button class="btn b2 sm" type="button" id="aExit">Salir</button></div>
+  </div>
+</div></header>
+
+<!-- Apartado de registro / inicio de sesión (agregado) -->
+<div class="authOv" id="authOv" hidden role="dialog" aria-modal="true" aria-labelledby="aTitle">
+  <div class="authM">
+    <button class="authX" id="authX" type="button" aria-label="Cerrar">&times;</button>
+    <img src="input_file_1.png" alt="">
+    <h2 id="aTitle">Registrate</h2>
+    <p class="authSub" id="aSub">Creá tu cuenta gratis y empezá a juntar sellos en MIROLI GNC.</p>
+    <div id="aSocial">
+      <button class="gbtn" id="aG" type="button"><svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/><path fill="#FBBC05" d="M10.5 28.7c-.5-1.5-.8-3-.8-4.7s.3-3.2.8-4.7l-7.9-6.1C.9 16.4 0 20.1 0 24s.9 7.6 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.8 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>Continuar con Google</button>
+      <div class="or"><span>o con tu correo</span></div>
+    </div>
+    <div class="tabs" id="aTabs"><button type="button" data-tab="login">Iniciar sesión</button><button type="button" data-tab="register">Registrarse</button></div>
+    <form id="aForm" novalidate>
+      <input id="aName" type="text" placeholder="Tu nombre" maxlength="40" autocomplete="name" aria-label="Nombre">
+      <input id="aMail" type="email" placeholder="Tu correo (Gmail u otro)" autocomplete="email" aria-label="Correo">
+      <input id="aPass" type="password" placeholder="Contraseña (mín. 6 caracteres)" minlength="6" autocomplete="current-password" aria-label="Contraseña">
+      <button class="btn b1" id="aGo" type="submit">Entrar</button>
+      <button class="aLink" id="aForgot" type="button">Olvidé mi contraseña</button>
+    </form>
+    <p class="aMsg" id="aMsg" aria-live="polite"></p>
+    <button class="aLink" id="aSkip" type="button" style="display:block;margin:8px auto 0">Seguir sin cuenta</button>
+  </div>
+</div>
+
+<main>
+<div class="hero" id="hero">
+  <div class="orb o1"></div><div class="orb o2"></div>
+  <div class="wrap heroGrid">
+    <div>
+      <h1>Más potencia.<br>Más <b>GNC.</b></h1>
+      <p class="sub">Renovamos tu oblea en el día y dejamos tu auto al 100%: GNC de 3ra y 5ta generación, inyección, diagnóstico y mecánica general.</p>
+      <div class="cta"><a class="btn b1" href="#contacto">Pedir turno</a><a class="btn b2" href="#tarjeta">Mi tarjeta de sellos</a></div>
+    </div>
+    <div class="stage" aria-hidden="true">
+      <img class="mascot-img" src="input_file_1.png" alt="Mascota MIROLI GNC">
+      <div class="floor"></div>
+      <div class="chip c1">Oblea en el día<small>Sin vueltas</small></div>
+      <div class="chip c2">GNC 3ra y 5ta<small>Instalación y ajuste</small></div>
+      <div class="chip c3">Diagnóstico<small>Con scanner</small></div>
+    </div>
+  </div>
+</div>
+
+<div class="tick" aria-hidden="true"><div>
+  <span>Renovación de oblea en el día</span><span>Prueba hidráulica</span><span>GNC 3ra y 5ta generación</span><span>Mecánica general</span><span>Inyección electrónica</span><span>Diagnóstico computarizado</span><span>Encendido electrónico</span>
+  <span>Renovación de oblea en el día</span><span>Prueba hidráulica</span><span>GNC 3ra y 5ta generación</span><span>Mecánica general</span><span>Inyección electrónica</span><span>Diagnóstico computarizado</span><span>Encendido electrónico</span>
+</div></div>
+
+<section id="servicios">
+  <div class="wrap">
+    <h2 class="rv">Nuestros servicios</h2>
+    <p class="lead rv">GNC y mecánica en un solo taller. Contanos qué le pasa à tu auto y te decimos qué hace falta.</p>
+    <div class="grid">
+      <article class="sv big rv"><span class="tag">En el día</span><h3>Renovación de oblea</h3><p>Resolvemos el trámite el mismo día para que sigas cargando GNC sin vueltas.</p></article>
+      <article class="sv rv"><h3>Prueba hidráulica</h3><p>Control de resistencia del cilindro para mantener tu equipo habilitado.</p></article>
+      <article class="sv rv"><h3>GNC 3ra y 5ta generación</h3><p>Instalación, puesta a punto y reparación de equipos de última tecnología.</p></article>
+      <article class="sv rv"><h3>Mecánica general</h3><p>Frenos, suspensión, distribución, embrague y mantenimiento.</p></article>
+      <article class="sv rv"><h3>Inyección electrónica</h3><p>Limpieza y ajuste para recuperar potencia y bajar el consumo.</p></article>
+      <article class="sv w2 rv"><h3>Diagnóstico computarizado</h3><p>Leemos las fallas con scanner y encontramos el problema real antes de cambiar piezas.</p></article>
+      <article class="sv w2 rv"><h3>Encendido electrónico</h3><p>Bobinas, módulos y sensores para un arranque firme y marcha pareja.</p></article>
+    </div>
+  </div>
+</section>
+
+<section class="fid" id="tarjeta">
+  <div class="wrap fidGrid">
+    <div class="rv">
+      <h2>Tarjeta de sellos</h2>
+      <p class="lead">Volvé al taller y sumá. Con 5 sellos, tu próximo servicio tiene premio.</p>
+      <ol class="how">
+        <li>Poné tu nombre en la tarjeta.</li>
+        <li>Cada trabajo de más de $80.000 ARS suma un sello.</li>
+        <li>Al juntar los 5, mostrá la tarjeta y canjeá tu premio.</li>
+      </ol>
+      <p class="note">Tu tarjeta queda guardada en este dispositivo. Entrá siempre desde el mismo teléfono para no perder tus sellos.</p>
+    </div>
+    <div class="rv">
+      <div class="card" aria-live="polite">
+        <div class="cTop"><div><b>MIROLI GNC Mechanics</b><small>Cliente frecuente</small></div><div class="cnt" id="cnt">0/5</div></div>
+        <input id="nm" class="name" placeholder="Tu nombre" maxlength="40" autocomplete="name" aria-label="Nombre del cliente">
+        <div class="slots" id="slots"></div>
+        <p class="msg" id="msg"></p>
+        <p class="rule">Un sello por cada trabajo de más de $80.000 ARS.</p>
+        <div class="prize" id="prize">Tarjeta completa: canjeá tu premio</div>
+        <details class="staff">
+          <summary>Solo personal del taller</summary>
+          <div class="sr">
+            <input id="amt" type="number" inputmode="numeric" placeholder="Monto en ARS" aria-label="Monto del trabajo en pesos">
+            <input id="pin" type="password" inputmode="numeric" placeholder="PIN" aria-label="PIN del taller" maxlength="8">
+          </div>
+          <div class="sr"><button class="btn b1" id="add" type="button">Dar sello</button><button class="btn b2" id="reset" type="button">Reiniciar</button></div>
+        </details>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="contact" id="contacto">
+  <div class="wrap">
+    <h2 class="rv">Sacá tu turno hoy</h2>
+    <p class="rv">Escribinos por WhatsApp, contanos el modelo de tu auto y qué necesitás. Te respondemos con día y horario.</p>
+    <a class="btn b1 rv" href="https://wa.me/5493814682677?text=Hola%20MIROLI%20GNC%20Mechanics%2C%20quiero%20sacar%20un%20turno" target="_blank" rel="noopener">Escribir por WhatsApp</a>
+  </div>
+</section>
+</main>
+<footer><div class="wrap"><span>© MIROLI GNC Mechanics</span><span>Oblea · Prueba hidráulica · GNC · Mecánica</span></div></footer>
+
+<script>
+(function(){
+  var PIN="1234", MAX=5, MIN=80000, KEY="miroli_card_v3";
+  var st={name:"",stamps:0};
+  try{var s=localStorage.getItem(KEY);if(s)st=JSON.parse(s)}catch(e){}
+  var $=function(i){return document.getElementById(i)};
+  var slots=$("slots"),nm=$("nm"),msg=$("msg");
+  for(var i=0;i<MAX;i++){var d=document.createElement("div");d.className="slot"+(i===MAX-1?" last":"");slots.appendChild(d)}
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}}
+  function render(){
+    for(var i=0;i<MAX;i++)slots.children[i].classList.toggle("on",i<st.stamps);
+    $("cnt").textContent=st.stamps+"/"+MAX; nm.value=st.name||"";
+    $("prize").classList.toggle("show",st.stamps>=MAX);
+    var f=MAX-st.stamps;
+    msg.textContent=st.stamps>=MAX?"¡Completaste los 5 sellos!":st.stamps===0?"Todavía no tenés sellos. Tu próximo trabajo grande suma.":"Te faltan "+f+" sello"+(f>1?"s":"")+" para tu premio.";
+  }
+  nm.addEventListener("input",function(){st.name=nm.value;save()});
+  function pinOk(){if($("pin").value!==PIN){msg.textContent="PIN incorrecto. Pedile al personal del taller.";return false}return true}
+  $("add").addEventListener("click",function(){
+    if(!pinOk())return;
+    var a=parseFloat($("amt").value);
+    if(!(a>MIN)){msg.textContent="El trabajo debe superar $80.000 ARS para sumar un sello.";return}
+    if(st.stamps>=MAX){msg.textContent="La tarjeta está completa. Canjeá el premio y reiniciala.";return}
+    st.stamps++;save();render();$("pin").value="";$("amt").value="";
+  });
+  $("reset").addEventListener("click",function(){if(!pinOk())return;st.stamps=0;save();render();$("pin").value=""});
+  render();
+
+  // luz que sigue al cursor
+  var h=$("hero");
+  h.addEventListener("pointermove",function(e){var r=h.getBoundingClientRect();h.style.setProperty("--mx",(e.clientX-r.left)+"px");h.style.setProperty("--my",(e.clientY-r.top)+"px")});
+  document.querySelectorAll(".sv").forEach(function(c){c.addEventListener("pointermove",function(e){var r=c.getBoundingClientRect();c.style.setProperty("--x",(e.clientX-r.left)+"px");c.style.setProperty("--y",(e.clientY-r.top)+"px")});});
+
+  // entrada al hacer scroll
+  var els=document.querySelectorAll(".rv");
+  if("IntersectionObserver" in window){
+    var io=new IntersectionObserver(function(en){en.forEach(function(x){if(x.isIntersecting){x.target.classList.add("in");io.unobserve(x.target)}})},{threshold:.15});
+    els.forEach(function(e,i){e.style.transitionDelay=(i%4)*70+"ms";io.observe(e)});
+  }else els.forEach(function(e){e.classList.add("in")});
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+(function(){
+  // === PEGÁ ACÁ LOS DATOS DE TU PROYECTO DE SUPABASE (Project Settings > API) ===
+  var SUPABASE_URL="sb_publishable_HDkogAkvhp2YHHRWak6REw_VWbUo_95";
+  var SUPABASE_KEY="sb_secret_ubTFCsji5lavshGmFd9khg_FD8Saonv";
+  // ==============================================================================
+  var $=function(i){return document.getElementById(i)};
+  var ok=/^https:\/\/.+\.supabase\.co/.test(SUPABASE_URL)&&SUPABASE_KEY.length>40&&window.supabase;
+  var sb=ok?window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
+  var ov=$("authOv"),msg=$("aMsg"),mode="login";
+  function say(t,c){msg.textContent=t||"";msg.className="aMsg "+(c||"")}
+  var T={login:["Iniciá sesión","Entrá para ver y guardar tus sellos.","Entrar"],register:["Registrate","Creá tu cuenta gratis y empezá a juntar sellos en MIROLI GNC.","Crear cuenta"],newpass:["Nueva contraseña","Elegí tu nueva contraseña.","Guardar contraseña"]};
+  function setMode(m){
+    mode=m;say("");
+    $("aTitle").textContent=T[m][0];$("aSub").textContent=T[m][1];$("aGo").textContent=T[m][2];
+    $("aSocial").classList.toggle("hid",m==="newpass");
+    $("aTabs").classList.toggle("hid",m==="newpass");
+    $("aName").classList.toggle("hid",m!=="register");
+    $("aMail").classList.toggle("hid",m==="newpass");
+    $("aForgot").classList.toggle("hid",m!=="login");
+    $("aPass").autocomplete=m==="login"?"current-password":"new-password";
+    document.querySelectorAll("[data-tab]").forEach(function(b){b.classList.toggle("on",b.dataset.tab===m)});
+  }
+  function open(m){setMode(m);ov.hidden=false;document.body.style.overflow="hidden"}
+  function close(){ov.hidden=true;document.body.style.overflow="";try{sessionStorage.setItem("miroli_auth_seen","1")}catch(e){}}
+  function tr(m){
+    m=m||"";
+    if(/invalid login/i.test(m))return"Correo o contraseña incorrectos.";
+    if(/not confirmed/i.test(m))return"Primero confirmá tu correo (revisá tu bandeja y spam).";
+    if(/already registered/i.test(m))return"Ese correo ya tiene cuenta. Probá iniciar sesión.";
+    if(/at least 6|weak/i.test(m))return"La contraseña debe tener al menos 6 caracteres.";
+    if(/valid email|invalid email/i.test(m))return"Revisá que el correo esté bien escrito.";
+    if(/rate limit|too many/i.test(m))return"Demasiados intentos. Esperá un rato y probá de nuevo.";
+    return"Ocurrió un error. Probá de nuevo.";
+  }
+  function showUser(s){
+    var u=s&&s.user;
+    $("aOut").classList.toggle("hid",!!u);$("aIn").classList.toggle("hid",!u);
+    if(u){var n=(u.user_metadata&&(u.user_metadata.full_name||u.user_metadata.name))||(u.email||"").split("@")[0];$("aUser").textContent="Hola, "+String(n).split(" ")[0]}
+  }
+  document.querySelectorAll("[data-auth]").forEach(function(b){b.addEventListener("click",function(){open(b.dataset.auth)})});
+  document.querySelectorAll("[data-tab]").forEach(function(b){b.addEventListener("click",function(){setMode(b.dataset.tab)})});
+  $("authX").addEventListener("click",close);$("aSkip").addEventListener("click",close);
+  ov.addEventListener("click",function(e){if(e.target===ov)close()});
+  document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!ov.hidden)close()});
+  var NOCFG="Falta conectar Supabase: pegá tu URL y tu clave en el código (ver la guía).";
+  $("aG").addEventListener("click",function(){
+    if(!sb){say(NOCFG,"err");return}
+    sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:location.origin}}).then(function(r){if(r.error)say(tr(r.error.message),"err")});
+  });
+  $("aForgot").addEventListener("click",function(){
+    if(!sb){say(NOCFG,"err");return}
+    var em=$("aMail").value.trim();
+    if(!em){say("Escribí tu correo y tocá de nuevo.","err");return}
+    sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin}).then(function(r){r.error?say(tr(r.error.message),"err"):say("Te enviamos un correo para cambiar tu contraseña.","ok")});
+  });
+  $("aForm").addEventListener("submit",function(e){
+    e.preventDefault();
+    if(!sb){say(NOCFG,"err");return}
+    var em=$("aMail").value.trim(),pw=$("aPass").value,btn=$("aGo"),p;
+    if(mode!=="newpass"&&!em){say("Escribí tu correo.","err");return}
+    if(pw.length<6){say("La contraseña debe tener al menos 6 caracteres.","err");return}
+    btn.disabled=true;say("Un momento…");
+    if(mode==="register")p=sb.auth.signUp({email:em,password:pw,options:{data:{full_name:$("aName").value.trim()},emailRedirectTo:location.origin}}).then(function(r){if(r.error)throw r.error;if(r.data.session){say("¡Cuenta creada!","ok");setTimeout(close,900)}else say("Te enviamos un correo: confirmalo para entrar.","ok")});
+    else if(mode==="login")p=sb.auth.signInWithPassword({email:em,password:pw}).then(function(r){if(r.error)throw r.error;close()});
+    else p=sb.auth.updateUser({password:pw}).then(function(r){if(r.error)throw r.error;say("Contraseña actualizada.","ok");setTimeout(close,900)});
+    p.catch(function(er){say(tr(er.message),"err")}).then(function(){btn.disabled=false});
+  });
+  $("aExit").addEventListener("click",function(){if(sb)sb.auth.signOut()});
+  if(sb){
+    sb.auth.onAuthStateChange(function(ev,s){if(ev==="PASSWORD_RECOVERY")open("newpass");showUser(s)});
+    sb.auth.getSession().then(function(r){showUser(r.data.session);if(!r.data.session)auto()});
+  }else auto();
+  function auto(){var seen=0;try{seen=sessionStorage.getItem("miroli_auth_seen")}catch(e){}if(!seen)setTimeout(function(){if(ov.hidden)open("register")},700)}
+})();
+</script>
+</body>
+</html>
