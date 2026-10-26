@@ -344,20 +344,11 @@ section{padding:64px 0}
     if(!logged){msg.textContent="Iniciá sesión para ver y guardar tus sellos.";return}
     msg.textContent=st.stamps>=MAX?"¡Completaste los 5 sellos!":st.stamps===0?"Todavía no tenés sellos. Tu próximo trabajo grande suma.":"Te faltan "+f+" sello"+(f>1?"s":"")+" para tu premio.";
   }
-  // Llama a una función SQL asegurándose de tener sesión vigente (y reintenta si el token venció)
+  // Llama a una función SQL. supabase-js adjunta el token de la sesión por su cuenta.
   function rpc(fn,args){
-    args=args||{};
-    return sb.auth.getSession().then(function(s){
-      if(!s.data||!s.data.session)return{error:{message:"NO_LOGIN"}};
-      return sb.rpc(fn,args).then(function(r){
-        if(r.error&&/JWT|expired/i.test(r.error.message||"")){
-          return sb.auth.refreshSession().then(function(x){
-            if(x.error||!x.data||!x.data.session)return{error:{message:"NO_LOGIN"}};
-            return sb.rpc(fn,args);
-          });
-        }
-        return r;
-      });
+    return sb.rpc(fn,args||{}).then(function(r){
+      if(r.error&&window.console)console.warn("[rpc "+fn+"]",r.error);
+      return r;
     }).catch(function(e){return{error:e}});
   }
   function apply(r){
@@ -485,6 +476,7 @@ section{padding:64px 0}
   if(sb){
     window.miroliSb=sb;
     sb.auth.onAuthStateChange(function(ev,s){
+      if(window.console)console.log("[auth]",ev,s?("sesión de "+(s.user&&s.user.email)):"sin sesión");
       if(ev==="PASSWORD_RECOVERY")open("newpass");
       showUser(s);
       window.dispatchEvent(new CustomEvent("miroli-session",{detail:s}));
