@@ -114,7 +114,7 @@ h2{font-size:clamp(42px,6.5vw,82px);font-weight:800;text-transform:uppercase;let
 .slot.last:not(.on){border-style:solid;color:var(--yel);font-size:13px;letter-spacing:.03em}
 .slot.last:not(.on)::after{content:"PREMIO"}
 .slot.on{background-image:url('input_file_0.png');border:none;box-shadow:0 0 20px rgba(215,25,31,.8);animation:pop .5s ease-out}
-@keyframes pop{0%{transform:scale(.3) rotate(-30deg)}65%{transform:scale(1.2)}100%{transform:scale(1)}}
+@keyframes pop{0%{transform:scale(.3) rotate(-30deg)}65%{transform:scale(1.2)}100%{transform:scale(1ova)}}
 .msg{margin:18px 0 0;font-weight:600;position:relative}
 .prize{display:none;margin-top:14px;background:var(--yel);color:var(--blk);border-radius:14px;padding:14px 16px;font:800 24px/1.1 "Barlow Condensed",sans-serif;text-transform:uppercase;position:relative;animation:blink 1.6s infinite;box-shadow:0 0 25px rgba(255,196,0,.6)}
 .prize.show{display:block}
@@ -264,7 +264,7 @@ section{padding:64px 0}
 <section id="servicios">
   <div class="wrap">
     <h2 class="rv">Nuestros servicios</h2>
-    <p class="lead rv">GNC y mecánica en un solo taller. Contanos qué le pasa a tu auto y te decimos qué hace falta.</p>
+    <p class="lead rv">GNC y mecánica en un solo taller. Contanos qué le pasa à tu auto y te decimos qué hace falta.</p>
     <div class="grid">
       <article class="sv big rv"><span class="tag">En el día</span><h3>Renovación de oblea</h3><p>Resolvemos el trámite el mismo día para que sigas cargando GNC sin vueltas.</p></article>
       <article class="sv rv"><h3>Prueba hidráulica</h3><p>Control de resistencia del cilindro para mantener tu equipo habilitado.</p></article>
@@ -328,7 +328,6 @@ section{padding:64px 0}
   var slots=$("slots"),nm=$("nm"),msg=$("msg");
   for(var i=0;i<MAX;i++){var d=document.createElement("div");d.className="slot"+(i===MAX-1?" last":"");slots.appendChild(d)}
   function errTxt(e){
-    if(window.console)console.error("Supabase error:",e);
     var m=(e&&e.message)||"";
     if(/PIN_INCORRECTO/.test(m))return"PIN incorrecto. Pedile al personal del taller.";
     if(/MONTO_BAJO/.test(m))return"El trabajo debe superar $80.000 ARS para sumar un sello.";
@@ -344,39 +343,23 @@ section{padding:64px 0}
     if(!logged){msg.textContent="Iniciá sesión para ver y guardar tus sellos.";return}
     msg.textContent=st.stamps>=MAX?"¡Completaste los 5 sellos!":st.stamps===0?"Todavía no tenés sellos. Tu próximo trabajo grande suma.":"Te faltan "+f+" sello"+(f>1?"s":"")+" para tu premio.";
   }
-  // Llama a una función SQL. supabase-js adjunta el token de la sesión por su cuenta.
-  function rpc(fn,args){
-    return sb.rpc(fn,args||{}).then(function(r){
-      if(r.error&&window.console)console.warn("[rpc "+fn+"]",r.error);
-      return r;
-    }).catch(function(e){return{error:e}});
-  }
-  function apply(r){
-    if(r.error){msg.textContent=errTxt(r.error);return false}
-    var d=Array.isArray(r.data)?r.data[0]:r.data;
-    if(!d){msg.textContent="No se pudo leer la tarjeta. Probá de nuevo.";return false}
-    st={name:d.name||"",stamps:Number(d.stamps)||0};render();return true;
-  }
+  function apply(r){if(r.error){msg.textContent=errTxt(r.error);return false}st={name:r.data.name||"",stamps:r.data.stamps};render();return true}
   function load(){
     if(!sb||!logged){st={name:"",stamps:0};render();return}
-    rpc("get_card").then(apply);
+    sb.rpc("get_card").then(apply);
   }
   // la tarjeta se carga cuando el script de sesión avisa quién está logueado
-  window.addEventListener("miroli-session",function(e){
-    sb=window.miroliSb;logged=!!(e.detail&&e.detail.user);
-    // setTimeout evita el bloqueo de supabase-js al llamar a la API dentro de onAuthStateChange
-    setTimeout(load,0);
-  });
-  nm.addEventListener("change",function(){if(!logged)return;rpc("set_card_name",{p_name:nm.value}).then(apply)});
+  window.addEventListener("miroli-session",function(e){sb=window.miroliSb;logged=!!(e.detail&&e.detail.user);load()});
+  nm.addEventListener("change",function(){if(!logged)return;sb.rpc("set_card_name",{p_name:nm.value}).then(apply)});
   $("add").addEventListener("click",function(){
     if(!logged){msg.textContent="Iniciá sesión para sumar sellos.";return}
     var a=parseFloat($("amt").value);
     if(!(a>MIN)){msg.textContent="El trabajo debe superar $80.000 ARS para sumar un sello.";return}
-    rpc("add_stamp",{p_pin:$("pin").value,p_amount:a}).then(function(r){if(apply(r)){$("pin").value="";$("amt").value=""}});
+    sb.rpc("add_stamp",{p_pin:$("pin").value,p_amount:a}).then(function(r){if(apply(r)){$("pin").value="";$("amt").value=""}});
   });
   $("reset").addEventListener("click",function(){
     if(!logged){msg.textContent="Iniciá sesión para usar tu tarjeta.";return}
-    rpc("reset_card",{p_pin:$("pin").value}).then(function(r){if(apply(r))$("pin").value=""});
+    sb.rpc("reset_card",{p_pin:$("pin").value}).then(function(r){if(apply(r))$("pin").value=""});
   });
   render();
 
@@ -393,7 +376,7 @@ section{padding:64px 0}
   }else els.forEach(function(e){e.classList.add("in")});
 })();
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
 (function(){
   // === PEGÁ ACÁ LOS DATOS DE TU PROYECTO DE SUPABASE (Project Settings > API) ===
@@ -402,17 +385,7 @@ section{padding:64px 0}
   // ==============================================================================
   var $=function(i){return document.getElementById(i)};
   var ok=/^https:\/\/.+\.supabase\.co/.test(SUPABASE_URL)&&SUPABASE_KEY.length>20&&window.supabase;
-  // Almacenamiento de sesión: localStorage -> sessionStorage -> memoria
-  var mem={};
-  function pick(){
-    var t="__miroli_t";
-    try{localStorage.setItem(t,"1");localStorage.removeItem(t);return localStorage}catch(e){}
-    try{sessionStorage.setItem(t,"1");sessionStorage.removeItem(t);return sessionStorage}catch(e){}
-    return{getItem:function(k){return k in mem?mem[k]:null},setItem:function(k,v){mem[k]=v},removeItem:function(k){delete mem[k]}};
-  }
-  var sb=ok?window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{
-    auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storage:pick(),storageKey:"miroli-auth"}
-  }):null;
+  var sb=ok?window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
   var ov=$("authOv"),msg=$("aMsg"),mode="login";
   function say(t,c){msg.textContent=t||"";msg.className="aMsg "+(c||"")}
   var T={login:["Iniciá sesión","Entrá para ver y guardar tus sellos.","Entrar"],register:["Registrate","Creá tu cuenta gratis y empezá a juntar sellos en MIROLI GNC.","Crear cuenta"],newpass:["Nueva contraseña","Elegí tu nueva contraseña.","Guardar contraseña"]};
@@ -474,18 +447,8 @@ section{padding:64px 0}
   });
   $("aExit").addEventListener("click",function(){if(sb)sb.auth.signOut()});
   if(sb){
-    window.miroliSb=sb;
-    sb.auth.onAuthStateChange(function(ev,s){
-      if(window.console)console.log("[auth]",ev,s?("sesión de "+(s.user&&s.user.email)):"sin sesión");
-      if(ev==="PASSWORD_RECOVERY")open("newpass");
-      showUser(s);
-      window.dispatchEvent(new CustomEvent("miroli-session",{detail:s}));
-    });
-    sb.auth.getSession().then(function(r){
-      showUser(r.data.session);
-      window.dispatchEvent(new CustomEvent("miroli-session",{detail:r.data.session}));
-      if(!r.data.session)auto();
-    });
+    sb.auth.onAuthStateChange(function(ev,s){if(ev==="PASSWORD_RECOVERY")open("newpass");showUser(s);window.miroliSb=sb;window.dispatchEvent(new CustomEvent("miroli-session",{detail:s}))});
+    sb.auth.getSession().then(function(r){showUser(r.data.session);window.miroliSb=sb;window.dispatchEvent(new CustomEvent("miroli-session",{detail:r.data.session}));if(!r.data.session)auto()});
   }else auto();
   function auto(){var seen=0;try{seen=sessionStorage.getItem("miroli_auth_seen")}catch(e){}if(!seen)setTimeout(function(){if(ov.hidden)open("register")},700)}
 })();
