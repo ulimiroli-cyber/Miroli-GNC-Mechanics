@@ -320,55 +320,12 @@ section{padding:64px 0}
 </main>
 <footer><div class="wrap"><span>© MIROLI GNC Mechanics</span><span>Oblea · Prueba hidráulica · GNC · Mecánica</span></div></footer>
 
+<!-- Efectos visuales (separado para que un error de sesión nunca rompa la página) -->
 <script>
 (function(){
-  var MAX=5, MIN=80000;
-  var st={name:"",stamps:0}, sb=null, logged=false;
-  var $=function(i){return document.getElementById(i)};
-  var slots=$("slots"),nm=$("nm"),msg=$("msg");
-  for(var i=0;i<MAX;i++){var d=document.createElement("div");d.className="slot"+(i===MAX-1?" last":"");slots.appendChild(d)}
-  function errTxt(e){
-    var m=(e&&e.message)||"";
-    if(/PIN_INCORRECTO/.test(m))return"PIN incorrecto. Pedile al personal del taller.";
-    if(/MONTO_BAJO/.test(m))return"El trabajo debe superar $80.000 ARS para sumar un sello.";
-    if(/TARJETA_COMPLETA/.test(m))return"La tarjeta está completa. Canjeá el premio y reiniciala.";
-    if(/NO_LOGIN|JWT|not authenticated/i.test(m))return"Iniciá sesión para usar tu tarjeta.";
-    return"No se pudo conectar. Probá de nuevo.";
-  }
-  function render(){
-    for(var i=0;i<MAX;i++)slots.children[i].classList.toggle("on",i<st.stamps);
-    $("cnt").textContent=st.stamps+"/"+MAX; nm.value=st.name||"";
-    $("prize").classList.toggle("show",st.stamps>=MAX);
-    var f=MAX-st.stamps;
-    if(!logged){msg.textContent="Iniciá sesión para ver y guardar tus sellos.";return}
-    msg.textContent=st.stamps>=MAX?"¡Completaste los 5 sellos!":st.stamps===0?"Todavía no tenés sellos. Tu próximo trabajo grande suma.":"Te faltan "+f+" sello"+(f>1?"s":"")+" para tu premio.";
-  }
-  function apply(r){if(r.error){msg.textContent=errTxt(r.error);return false}st={name:r.data.name||"",stamps:r.data.stamps};render();return true}
-  function load(){
-    if(!sb||!logged){st={name:"",stamps:0};render();return}
-    sb.rpc("get_card").then(apply);
-  }
-  // la tarjeta se carga cuando el script de sesión avisa quién está logueado
-  window.addEventListener("miroli-session",function(e){sb=window.miroliSb;logged=!!(e.detail&&e.detail.user);load()});
-  nm.addEventListener("change",function(){if(!logged)return;sb.rpc("set_card_name",{p_name:nm.value}).then(apply)});
-  $("add").addEventListener("click",function(){
-    if(!logged){msg.textContent="Iniciá sesión para sumar sellos.";return}
-    var a=parseFloat($("amt").value);
-    if(!(a>MIN)){msg.textContent="El trabajo debe superar $80.000 ARS para sumar un sello.";return}
-    sb.rpc("add_stamp",{p_pin:$("pin").value,p_amount:a}).then(function(r){if(apply(r)){$("pin").value="";$("amt").value=""}});
-  });
-  $("reset").addEventListener("click",function(){
-    if(!logged){msg.textContent="Iniciá sesión para usar tu tarjeta.";return}
-    sb.rpc("reset_card",{p_pin:$("pin").value}).then(function(r){if(apply(r))$("pin").value=""});
-  });
-  render();
-
-  // luz que sigue al cursor
-  var h=$("hero");
-  h.addEventListener("pointermove",function(e){var r=h.getBoundingClientRect();h.style.setProperty("--mx",(e.clientX-r.left)+"px");h.style.setProperty("--my",(e.clientY-r.top)+"px")});
-  document.querySelectorAll(".sv").forEach(function(c){c.addEventListener("pointermove",function(e){var r=c.getBoundingClientRect();c.style.setProperty("--x",(e.clientX-r.left)+"px");c.style.setProperty("--y",(e.clientY-r.top)+"px")});});
-
-  // entrada al hacer scroll
+  var h=document.getElementById("hero");
+  if(h)h.addEventListener("pointermove",function(e){var r=h.getBoundingClientRect();h.style.setProperty("--mx",(e.clientX-r.left)+"px");h.style.setProperty("--my",(e.clientY-r.top)+"px")});
+  document.querySelectorAll(".sv").forEach(function(c){c.addEventListener("pointermove",function(e){var r=c.getBoundingClientRect();c.style.setProperty("--x",(e.clientX-r.left)+"px");c.style.setProperty("--y",(e.clientY-r.top)+"px")})});
   var els=document.querySelectorAll(".rv");
   if("IntersectionObserver" in window){
     var io=new IntersectionObserver(function(en){en.forEach(function(x){if(x.isIntersecting){x.target.classList.add("in");io.unobserve(x.target)}})},{threshold:.15});
@@ -376,19 +333,50 @@ section{padding:64px 0}
   }else els.forEach(function(e){e.classList.add("in")});
 })();
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.87.3/dist/umd/supabase.js"></script>
 <script>
+/* =====================================================================
+   MIROLI GNC · Sesión + Tarjeta de sellos (Supabase)
+   Reglas que hacen que la sesión NO se caiga:
+   1) Un solo cliente de Supabase en toda la página.
+   2) Dentro de onAuthStateChange NO se llama a nada de supabase
+      (rpc, getSession, etc.): se difiere con setTimeout. Llamarlo ahí
+      adentro traba el candado interno de auth-js y a los ~5 s la
+      sesión se pierde.
+   3) Nunca se hace signOut() automático: solo cuando el usuario toca "Salir".
+   ===================================================================== */
 (function(){
-  // === PEGÁ ACÁ LOS DATOS DE TU PROYECTO DE SUPABASE (Project Settings > API) ===
+  "use strict";
   var SUPABASE_URL="https://wqwqcpavpxtwxtowfnmp.supabase.co";
   var SUPABASE_KEY="sb_publishable_HDkogAkvhp2YHHRWak6REw_VWbUo_95";
-  // ==============================================================================
+  var MAX=5, MIN=80000;
   var $=function(i){return document.getElementById(i)};
-  var ok=/^https:\/\/.+\.supabase\.co/.test(SUPABASE_URL)&&SUPABASE_KEY.length>20&&window.supabase;
-  var sb=ok?window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
-  var ov=$("authOv"),msg=$("aMsg"),mode="login";
-  function say(t,c){msg.textContent=t||"";msg.className="aMsg "+(c||"")}
-  var T={login:["Iniciá sesión","Entrá para ver y guardar tus sellos.","Entrar"],register:["Registrate","Creá tu cuenta gratis y empezá a juntar sellos en MIROLI GNC.","Crear cuenta"],newpass:["Nueva contraseña","Elegí tu nueva contraseña.","Guardar contraseña"]};
+
+  /* ---------- cliente único ---------- */
+  var sb=null;
+  try{
+    if(window.supabase&&/^https:\/\/.+\.supabase\.co/.test(SUPABASE_URL)&&SUPABASE_KEY.length>20){
+      sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{
+        auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
+      });
+    }
+  }catch(e){console.error("Supabase init:",e)}
+
+  /* ---------- estado ---------- */
+  var user=null;                 // usuario logueado (o null)
+  var card={name:"",stamps:0};
+  var busy=false;                // evita doble toque en dar sello / reiniciar
+  var cardUserId=null;           // para qué usuario está cargada la tarjeta
+
+  /* =================== MODAL DE SESIÓN =================== */
+  var ov=$("authOv"),amsg=$("aMsg"),mode="login";
+  var T={
+    login:["Iniciá sesión","Entrá para ver y guardar tus sellos.","Entrar"],
+    register:["Registrate","Creá tu cuenta gratis y empezá a juntar sellos en MIROLI GNC.","Crear cuenta"],
+    newpass:["Nueva contraseña","Elegí tu nueva contraseña.","Guardar contraseña"]
+  };
+  function say(t,c){amsg.textContent=t||"";amsg.className="aMsg "+(c||"")}
   function setMode(m){
     mode=m;say("");
     $("aTitle").textContent=T[m][0];$("aSub").textContent=T[m][1];$("aGo").textContent=T[m][2];
@@ -400,9 +388,12 @@ section{padding:64px 0}
     $("aPass").autocomplete=m==="login"?"current-password":"new-password";
     document.querySelectorAll("[data-tab]").forEach(function(b){b.classList.toggle("on",b.dataset.tab===m)});
   }
-  function open(m){setMode(m);ov.hidden=false;document.body.style.overflow="hidden"}
-  function close(){ov.hidden=true;document.body.style.overflow="";try{sessionStorage.setItem("miroli_auth_seen","1")}catch(e){}}
-  function tr(m){
+  function openAuth(m){setMode(m);ov.hidden=false;document.body.style.overflow="hidden"}
+  function closeAuth(){
+    ov.hidden=true;document.body.style.overflow="";
+    try{sessionStorage.setItem("miroli_auth_seen","1")}catch(e){}
+  }
+  function trAuth(m){
     m=m||"";
     if(/invalid login/i.test(m))return"Correo o contraseña incorrectos.";
     if(/not confirmed/i.test(m))return"Primero confirmá tu correo (revisá tu bandeja y spam).";
@@ -412,26 +403,27 @@ section{padding:64px 0}
     if(/rate limit|too many/i.test(m))return"Demasiados intentos. Esperá un rato y probá de nuevo.";
     return"Ocurrió un error. Probá de nuevo.";
   }
-  function showUser(s){
-    var u=s&&s.user;
-    $("aOut").classList.toggle("hid",!!u);$("aIn").classList.toggle("hid",!u);
-    if(u){var n=(u.user_metadata&&(u.user_metadata.full_name||u.user_metadata.name))||(u.email||"").split("@")[0];$("aUser").textContent="Hola, "+String(n).split(" ")[0]}
-  }
-  document.querySelectorAll("[data-auth]").forEach(function(b){b.addEventListener("click",function(){open(b.dataset.auth)})});
+  var NOCFG="No se pudo conectar con el servidor de cuentas. Recargá la página.";
+
+  document.querySelectorAll("[data-auth]").forEach(function(b){b.addEventListener("click",function(){openAuth(b.dataset.auth)})});
   document.querySelectorAll("[data-tab]").forEach(function(b){b.addEventListener("click",function(){setMode(b.dataset.tab)})});
-  $("authX").addEventListener("click",close);$("aSkip").addEventListener("click",close);
-  ov.addEventListener("click",function(e){if(e.target===ov)close()});
-  document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!ov.hidden)close()});
-  var NOCFG="Falta conectar Supabase: pegá tu URL y tu clave en el código (ver la guía).";
+  $("authX").addEventListener("click",closeAuth);
+  $("aSkip").addEventListener("click",closeAuth);
+  ov.addEventListener("click",function(e){if(e.target===ov)closeAuth()});
+  document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!ov.hidden)closeAuth()});
+
   $("aG").addEventListener("click",function(){
     if(!sb){say(NOCFG,"err");return}
-    sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:location.origin}}).then(function(r){if(r.error)say(tr(r.error.message),"err")});
+    sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:location.origin}})
+      .then(function(r){if(r.error)say(trAuth(r.error.message),"err")});
   });
   $("aForgot").addEventListener("click",function(){
     if(!sb){say(NOCFG,"err");return}
     var em=$("aMail").value.trim();
     if(!em){say("Escribí tu correo y tocá de nuevo.","err");return}
-    sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin}).then(function(r){r.error?say(tr(r.error.message),"err"):say("Te enviamos un correo para cambiar tu contraseña.","ok")});
+    sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin}).then(function(r){
+      r.error?say(trAuth(r.error.message),"err"):say("Te enviamos un correo para cambiar tu contraseña.","ok");
+    });
   });
   $("aForm").addEventListener("submit",function(e){
     e.preventDefault();
@@ -440,17 +432,149 @@ section{padding:64px 0}
     if(mode!=="newpass"&&!em){say("Escribí tu correo.","err");return}
     if(pw.length<6){say("La contraseña debe tener al menos 6 caracteres.","err");return}
     btn.disabled=true;say("Un momento…");
-    if(mode==="register")p=sb.auth.signUp({email:em,password:pw,options:{data:{full_name:$("aName").value.trim()},emailRedirectTo:location.origin}}).then(function(r){if(r.error)throw r.error;if(r.data.session){say("¡Cuenta creada!","ok");setTimeout(close,900)}else say("Te enviamos un correo: confirmalo para entrar.","ok")});
-    else if(mode==="login")p=sb.auth.signInWithPassword({email:em,password:pw}).then(function(r){if(r.error)throw r.error;close()});
-    else p=sb.auth.updateUser({password:pw}).then(function(r){if(r.error)throw r.error;say("Contraseña actualizada.","ok");setTimeout(close,900)});
-    p.catch(function(er){say(tr(er.message),"err")}).then(function(){btn.disabled=false});
+    if(mode==="register"){
+      p=sb.auth.signUp({email:em,password:pw,options:{data:{full_name:$("aName").value.trim()},emailRedirectTo:location.origin}})
+        .then(function(r){
+          if(r.error)throw r.error;
+          if(r.data.session){say("¡Cuenta creada!","ok");setTimeout(closeAuth,700)}
+          else say("Te enviamos un correo: confirmalo para entrar.","ok");
+        });
+    }else if(mode==="login"){
+      p=sb.auth.signInWithPassword({email:em,password:pw}).then(function(r){if(r.error)throw r.error;closeAuth()});
+    }else{
+      p=sb.auth.updateUser({password:pw}).then(function(r){if(r.error)throw r.error;say("Contraseña actualizada.","ok");setTimeout(closeAuth,900)});
+    }
+    p.catch(function(er){say(trAuth(er&&er.message),"err")}).then(function(){btn.disabled=false});
   });
-  $("aExit").addEventListener("click",function(){if(sb)sb.auth.signOut()});
+  $("aExit").addEventListener("click",function(){
+    if(!sb)return;
+    sb.auth.signOut().then(function(){});   // el resto lo hace el evento SIGNED_OUT
+  });
+
+  /* =================== CABECERA (Hola, nombre) =================== */
+  function showUser(){
+    $("aOut").classList.toggle("hid",!!user);
+    $("aIn").classList.toggle("hid",!user);
+    if(user){
+      var md=user.user_metadata||{};
+      var n=md.full_name||md.name||(user.email||"").split("@")[0]||"";
+      $("aUser").textContent="Hola, "+String(n).split(" ")[0];
+    }
+  }
+
+  /* =================== TARJETA DE SELLOS =================== */
+  var slots=$("slots"),nm=$("nm"),cmsg=$("msg");
+  for(var i=0;i<MAX;i++){var d=document.createElement("div");d.className="slot"+(i===MAX-1?" last":"");slots.appendChild(d)}
+
+  function errTxt(code){
+    code=String(code||"");
+    if(/PIN_INCORRECTO/.test(code))return"PIN incorrecto. Pedile al personal del taller.";
+    if(/BLOQUEADO/.test(code))return"Demasiados intentos con el PIN. Probá de nuevo en 15 minutos.";
+    if(/MONTO_BAJO/.test(code))return"El trabajo debe superar $80.000 ARS para sumar un sello.";
+    if(/TARJETA_COMPLETA/.test(code))return"La tarjeta está completa. Canjeá el premio y reiniciala.";
+    if(/NO_LOGIN|JWT|not authenticated|expired/i.test(code))return"Tu sesión venció. Volvé a iniciar sesión.";
+    if(/does not exist|schema cache|PGRST202/i.test(code))return"Falta instalar la base de datos de sellos (ver supabase_setup.sql).";
+    return"No se pudo conectar. Probá de nuevo.";
+  }
+  function renderCard(){
+    for(var i=0;i<MAX;i++)slots.children[i].classList.toggle("on",i<card.stamps);
+    $("cnt").textContent=card.stamps+"/"+MAX;
+    if(document.activeElement!==nm)nm.value=card.name||"";
+    $("prize").classList.toggle("show",card.stamps>=MAX);
+    if(!user){cmsg.textContent="Iniciá sesión para ver y guardar tus sellos.";return}
+    var f=MAX-card.stamps;
+    cmsg.textContent=card.stamps>=MAX?"¡Completaste los 5 sellos!":
+      card.stamps===0?"Todavía no tenés sellos. Tu próximo trabajo grande suma.":
+      "Te faltan "+f+" sello"+(f>1?"s":"")+" para tu premio.";
+  }
+
+  /* Llama a una función de Supabase. Devuelve {data} o {error:"CODIGO"}. */
+  async function rpc(fn,args){
+    if(!sb)return{error:"NO_CLIENT"};
+    for(var t=0;t<2;t++){
+      var r;
+      try{r=await sb.rpc(fn,args||{})}catch(e){return{error:String(e&&e.message||e)}}
+      if(r.error){
+        var m=(r.error.message||"")+" "+(r.error.code||"")+" "+(r.status||"");
+        if(t===0&&/JWT|401|expired/i.test(m)){      // token vencido: renovar y reintentar UNA vez
+          try{await sb.auth.refreshSession()}catch(e){}
+          continue;
+        }
+        return{error:m};
+      }
+      var d=Array.isArray(r.data)?r.data[0]:r.data;
+      if(!d||typeof d!=="object")return{error:"RESPUESTA_VACIA"};
+      if(d.ok===false)return{error:d.error||"ERROR"};
+      return{data:d};
+    }
+    return{error:"JWT"};
+  }
+  function applyRes(res){
+    if(res.error){cmsg.textContent=errTxt(res.error);return false}
+    card={name:res.data.name||"",stamps:Math.max(0,Math.min(MAX,parseInt(res.data.stamps,10)||0))};
+    renderCard();return true;
+  }
+  async function loadCard(){
+    if(!user){card={name:"",stamps:0};cardUserId=null;renderCard();return}
+    cmsg.textContent="Cargando tu tarjeta…";
+    var uid=user.id,res=await rpc("get_card");
+    if(!user||user.id!==uid)return;                 // cambió la sesión mientras cargaba
+    if(applyRes(res))cardUserId=uid;
+  }
+  function setBusy(b){busy=b;$("add").disabled=b;$("reset").disabled=b}
+
+  var nameTimer=null;
+  nm.addEventListener("change",function(){
+    if(!user)return;
+    clearTimeout(nameTimer);
+    nameTimer=setTimeout(async function(){applyRes(await rpc("set_card_name",{p_name:nm.value.trim()}))},150);
+  });
+  $("add").addEventListener("click",async function(){
+    if(busy)return;
+    if(!user){cmsg.textContent="Iniciá sesión para sumar sellos.";return}
+    var a=parseFloat($("amt").value);
+    if(!(a>MIN)){cmsg.textContent="El trabajo debe superar $80.000 ARS para sumar un sello.";return}
+    if(!$("pin").value){cmsg.textContent="Ingresá el PIN del taller.";return}
+    setBusy(true);
+    try{
+      if(applyRes(await rpc("add_stamp",{p_pin:$("pin").value,p_amount:a}))){$("pin").value="";$("amt").value=""}
+    }finally{setBusy(false)}
+  });
+  $("reset").addEventListener("click",async function(){
+    if(busy)return;
+    if(!user){cmsg.textContent="Iniciá sesión para usar tu tarjeta.";return}
+    if(!$("pin").value){cmsg.textContent="Ingresá el PIN del taller.";return}
+    setBusy(true);
+    try{
+      if(applyRes(await rpc("reset_card",{p_pin:$("pin").value})))$("pin").value="";
+    }finally{setBusy(false)}
+  });
+
+  /* =================== ESTADO DE SESIÓN (único punto de entrada) =================== */
+  function onSession(ev,session){
+    var newUser=(session&&session.user)||null;
+    if(ev==="PASSWORD_RECOVERY")openAuth("newpass");
+    if(ev==="SIGNED_OUT"||(ev==="INITIAL_SESSION"&&!newUser)){user=null}
+    else if(newUser){user=newUser}
+    showUser();
+    // la tarjeta se recarga solo si cambió el usuario (SIGNED_IN también salta al volver a la pestaña)
+    var uid=user?user.id:null;
+    if(uid!==cardUserId||ev==="SIGNED_OUT")loadCard();
+    if(ev==="INITIAL_SESSION"&&!newUser)autoOpen();
+    if(newUser&&!ov.hidden&&mode!=="newpass"&&ev==="SIGNED_IN")closeAuth();
+  }
+  function autoOpen(){
+    var seen=0;try{seen=sessionStorage.getItem("miroli_auth_seen")}catch(e){}
+    if(!seen)setTimeout(function(){if(ov.hidden&&!user)openAuth("register")},700);
+  }
+
+  renderCard();
   if(sb){
-    sb.auth.onAuthStateChange(function(ev,s){if(ev==="PASSWORD_RECOVERY")open("newpass");showUser(s);window.miroliSb=sb;window.dispatchEvent(new CustomEvent("miroli-session",{detail:s}))});
-    sb.auth.getSession().then(function(r){showUser(r.data.session);window.miroliSb=sb;window.dispatchEvent(new CustomEvent("miroli-session",{detail:r.data.session}));if(!r.data.session)auto()});
-  }else auto();
-  function auto(){var seen=0;try{seen=sessionStorage.getItem("miroli_auth_seen")}catch(e){}if(!seen)setTimeout(function(){if(ov.hidden)open("register")},700)}
+    sb.auth.onAuthStateChange(function(ev,session){
+      // IMPORTANTE: acá adentro no se llama a Supabase. Se difiere.
+      setTimeout(function(){onSession(ev,session)},0);
+    });
+  }else autoOpen();
 })();
 </script>
 </body>
